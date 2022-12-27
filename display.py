@@ -1,5 +1,6 @@
 from pygame.time import Clock
 from pygame import Rect
+from pygame import font
 import pygame
 import random
 from enum import Enum
@@ -17,7 +18,10 @@ class Display:
     RED = (255,0,0)
     BLUE = (0,0,255)
     BLACK = (0,0,0)
-    SQUARE_PIX = 10
+    WHITE = (255,255,255)
+    SQUARE_PIX = 20
+    FONT_SIZE = 30
+    FPS_MILLIS = 10
     """For left, top corner as reference pt"""
     DIRS = [[0,0], [SQUARE_PIX,0], [SQUARE_PIX, SQUARE_PIX], [0, SQUARE_PIX]]
     def __init__(self, width, height) -> None:
@@ -40,10 +44,11 @@ class Display:
         red_l,red_t = self.rand_food_location()
         self.red_rect = Rect(red_l, red_t, Display.SQUARE_PIX, Display.SQUARE_PIX)
         pygame.draw.rect(self.dis, Display.RED, self.red_rect)
-        self.fps_millis = 10
-        self.pix_change = 10
+        self.fps_millis = Display.FPS_MILLIS
+        self.pix_change = Display.SQUARE_PIX
         self.food_count = 0
         self.orient = Orientation.none
+        self.font = font.SysFont("arial", Display.FONT_SIZE)
         
     def is_within_window(self, x, y) -> bool:
         """Determines if the coordinates are within the defined window size
@@ -118,6 +123,8 @@ class Display:
         """        
         self.dis.fill(Display.BLACK)
         pygame.draw.rect(self.dis, Display.RED, self.red_rect)
+        score_label = self.font.render("Score: " + str(self.food_count), True, Display.WHITE)
+        self.dis.blit(score_label, (0,0))
         self.display_snake()    
 
     def has_collided(self) -> bool:
@@ -126,10 +133,9 @@ class Display:
         return False
 
     def game_loop(self):
-        moved = False
         clk = Clock()
         game_over = False
-        prev_move = (0,0)
+        prev_move = (0,0)            
         while not game_over:
             clk.tick(self.fps_millis)
             for event in pygame.event.get():
@@ -150,13 +156,9 @@ class Display:
                     elif event.key == pygame.K_UP:
                         y = -self.pix_change
                         self.orient = Orientation.up
-                    self.snake_head.move_ip(x,y)
                     prev_move = (x,y)
-                    moved = True
-                else:
-                    moved = False
-            if not moved:
-                self.snake_head.move_ip(prev_move[0], prev_move[1])
+                break
+            self.snake_head.move_ip(prev_move[0], prev_move[1])
             has_eaten = False
             if self.has_eaten_food():
                 print("Food obtained")
@@ -165,13 +167,14 @@ class Display:
                 self.update_food_loc()
                 has_eaten = True
             self.update_snake(has_eaten)
+            self.update_display()
             if self.snake_head.left < 0 or self.snake_head.right > self.width or self.snake_head.top < 0 or self.snake_head.bottom > self.height:
                 print("Out of bounds!")
                 game_over = True
             if not has_eaten and self.has_collided():
+                print(self.snake)
                 print("Collided!")
                 game_over = True
-            self.update_display()
             pygame.display.update()
         print("Goodbye")
         pygame.quit()
