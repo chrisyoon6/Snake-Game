@@ -28,8 +28,10 @@ class Display:
         self.red_rect = Rect(red_l, red_t, Display.SQUARE_PIX, Display.SQUARE_PIX)
         pygame.draw.rect(self.dis, Display.RED, self.red_rect)
         pygame.display.update()
-        self.fps_millis = 5
-
+        self.fps_millis = 10
+        self.pix_change = 5
+        self.food_count = 0
+        
     def is_within_window(self, x, y) -> bool:
         """Determines if the coordinates are within the defined window size
 
@@ -82,6 +84,11 @@ class Display:
             print(x,y)
         return (red_l,red_t)
     
+    def update_food_loc(self):
+        new_l, new_t = self.rand_food_location()
+        self.red_rect.update(new_l, new_t, Display.SQUARE_PIX, Display.SQUARE_PIX)
+        pygame.draw.rect(self.dis, Display.RED, self.red_rect)
+        
     def game_loop(self):
         moved = False
         clk = Clock()
@@ -95,15 +102,14 @@ class Display:
                     game_over = True
                 if event.type == pygame.KEYDOWN:
                     x,y = (0,0)
-                    delta = 10
                     if event.key == pygame.K_LEFT:
-                        x = -delta
+                        x = -self.pix_change
                     elif event.key == pygame.K_RIGHT:
-                        x = delta
+                        x = self.pix_change
                     elif event.key == pygame.K_DOWN:
-                        y = delta
+                        y = self.pix_change
                     elif event.key == pygame.K_UP:
-                        y = -delta
+                        y = -self.pix_change
                     self.blue_rect.move_ip(x,y)
                     prev_move = (x,y)
                     moved = True
@@ -114,10 +120,13 @@ class Display:
             self.dis.fill(Display.BLACK)
             pygame.draw.rect(self.dis, Display.RED, self.red_rect)
             pygame.draw.rect(self.dis, Display.BLUE, self.blue_rect)
-            pygame.display.update()
             print(self.dis.get_at((self.red_rect.left, self.red_rect.top)))
             if self.has_eaten_food():
                 print("Food obtained")
+                self.food_count += 1
+                # update location
+                self.update_food_loc()
+            pygame.display.update()
             if self.blue_rect.left < 0 or self.blue_rect.right > self.width or self.blue_rect.top < 0 or self.blue_rect.bottom > self.height:
                 game_over = True
         print("Goodbye")
