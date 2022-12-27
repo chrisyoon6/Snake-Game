@@ -4,6 +4,8 @@ import pygame
 import random
 from enum import Enum
 from collections import deque
+from copy import copy
+
 class Orientation(Enum):
     none = -1
     up = 0
@@ -33,14 +35,13 @@ class Display:
         """List of tuples representing the top left corner of each rectangle component the snake."""
         self.snake = deque([(width//2, height//2)])
         self.snake_head = Rect(width//2, height//2, Display.SQUARE_PIX, Display.SQUARE_PIX)
+        self.snake_rects = [self.snake_head]
         pygame.draw.rect(self.dis, Display.BLUE, self.snake_head)
-        pygame.display.update()
         red_l,red_t = self.rand_food_location()
         self.red_rect = Rect(red_l, red_t, Display.SQUARE_PIX, Display.SQUARE_PIX)
         pygame.draw.rect(self.dis, Display.RED, self.red_rect)
-        pygame.display.update()
         self.fps_millis = 10
-        self.pix_change = 5
+        self.pix_change = 10
         self.food_count = 0
         self.orient = Orientation.none
         
@@ -62,14 +63,7 @@ class Display:
         Returns:
             bool: True if the snake is at the food's location at the time of the method call
         """
-        for dir in Display.DIRS:
-            x = self.red_rect.left + dir[0]
-            y = self.red_rect.top + dir[1]
-            if not self.is_within_window(x,y):
-                continue
-            if self.dis.get_at((x,y)) == pygame.Color(Display.BLUE):
-                return True
-        return False
+        return self.red_rect.colliderect(self.snake_head)
 
     def rand_food_location(self) -> tuple[int,int]:
         """Returns a valid random location for the red rectangle (food) to spawn.
@@ -88,12 +82,10 @@ class Display:
             for dir in Display.DIRS:
                 x = red_l + dir[0]
                 y = red_t + dir[1]
-                print(self.dis.get_at((x,y)))
                 # red square overwritten when blue moves on top
                 if not self.is_within_window(x,y) or self.dis.get_at((x,y)) == pygame.Color(Display.BLUE):
                     valid_loc = False
                     break
-            print(x,y)
         return (red_l,red_t)
     
     def update_food_loc(self) -> None:
@@ -110,15 +102,16 @@ class Display:
             has_eaten_food (bool): True if snake has eaten food at the time of the method call
         """        
         self.snake.appendleft((self.snake_head.left, self.snake_head.top))
+        self.snake_rects.insert(0, copy(self.snake_head))
         if not has_eaten_food:
             self.snake.pop()
+            self.snake_rects.pop()
 
     def display_snake(self):
         """Displays the current snake on the screen
         """        
-        for l,t in self.snake:
-            snake_rect = Rect(l, t, Display.SQUARE_PIX, Display.SQUARE_PIX)
-            pygame.draw.rect(self.dis, Display.BLUE, snake_rect)
+        for cmp in self.snake_rects:
+            pygame.draw.rect(self.dis, Display.BLUE, cmp)
 
     def update_display(self):
         """Updates the screen with the game's current state
@@ -126,6 +119,11 @@ class Display:
         self.dis.fill(Display.BLACK)
         pygame.draw.rect(self.dis, Display.RED, self.red_rect)
         self.display_snake()    
+
+    def has_collided(self) -> bool:
+        if self.snake_head.collidelist(self.snake_rects[1:]) != -1:
+            return True
+        return False
 
     def game_loop(self):
         moved = False
@@ -167,11 +165,14 @@ class Display:
                 self.update_food_loc()
                 has_eaten = True
             self.update_snake(has_eaten)
-            self.update_display()
-            print(self.dis.get_at((self.red_rect.left, self.red_rect.top)))
-            pygame.display.update()
             if self.snake_head.left < 0 or self.snake_head.right > self.width or self.snake_head.top < 0 or self.snake_head.bottom > self.height:
+                print("Out of bounds!")
                 game_over = True
+            if not has_eaten and self.has_collided():
+                print("Collided!")
+                game_over = True
+            self.update_display()
+            pygame.display.update()
         print("Goodbye")
         pygame.quit()
         quit()
