@@ -6,7 +6,8 @@ import random
 from enum import Enum
 from collections import deque
 from copy import copy
-
+import json
+import os
 class Orientation(Enum):
     none = -1
     up = 0
@@ -21,6 +22,7 @@ class Display:
     WHITE = (255,255,255)
     SQUARE_PIX = 20
     FONT_SIZE = 30
+    SCORES_FONT_SIZE = 20
     FPS_MILLIS = 10
     """For left, top corner as reference pt"""
     DIRS = [[0,0], [SQUARE_PIX,0], [SQUARE_PIX, SQUARE_PIX], [0, SQUARE_PIX]]
@@ -49,6 +51,8 @@ class Display:
         self.food_count = 0
         self.orient = Orientation.none
         self.font = font.SysFont("arial", Display.FONT_SIZE)
+        self.scores_font = font.SysFont("arial", Display.SCORES_FONT_SIZE)
+        self.scores = {}
         
     def is_within_window(self, x, y) -> bool:
         """Determines if the coordinates are within the defined window size
@@ -128,15 +132,61 @@ class Display:
         self.display_snake()    
 
     def has_collided(self) -> bool:
+        """Determines whether or not the snake has collied with itself
+
+        Returns:
+            bool: True if collison occurred, False otherwise.
+        """        
         if self.snake_head.collidelist(self.snake_rects[1:]) != -1:
             return True
+        return False
+
+    def update_scores(self):
+        """Displays the highest scores from this game. To be called when the game has ended.
+        """     
+        scores = {}
+        count = 0
+        with open("scores.json", "r") as f:
+            if os.stat("scores.json").st_size != 0:
+                scores = f.read()
+                scores = json.loads(scores)
+                count = int(list(scores.keys())[-1]) + 1
+        with open("scores.json", "w") as f:
+            scores[str(count)] = str(self.food_count)
+            json.dump(scores, f)
+        self.scores = scores
+
+    def display_highscores(self, nums=5):
+        scores = list(self.scores.values())
+        scores.sort(reverse=True)
+        if nums > len(scores):
+            nums = len(scores)
+        scores = scores[:nums]
+        scores_str = "High scores: "
+        for s in scores:
+            scores_str += str(s) + " "
+        print(scores_str)
+        scores_label = self.scores_font.render(scores_str, True, Display.WHITE)
+        self.dis.blit(scores_label, (0,0))
+        pygame.display.update()
+
+    def endgame_handler(self):
+        self.display_highscores()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return True
         return False
 
     def game_loop(self):
         clk = Clock()
         game_over = False
+        close_app = False
         prev_move = (0,0)            
-        while not game_over:
+        while not close_app:
+            if game_over:
+                close_app = self.endgame_handler()
+                continue
+
             clk.tick(self.fps_millis)
             for event in pygame.event.get():
                 # print(event)
@@ -171,15 +221,32 @@ class Display:
             if self.snake_head.left < 0 or self.snake_head.right > self.width or self.snake_head.top < 0 or self.snake_head.bottom > self.height:
                 print("Out of bounds!")
                 game_over = True
-            if not has_eaten and self.has_collided():
+                self.dis.fill(Display.BLACK)
+                self.update_scores()  
+            elif not has_eaten and self.has_collided():
                 print(self.snake)
                 print("Collided!")
                 game_over = True
+                self.dis.fill(Display.BLACK)
+                self.update_scores()  
+
             pygame.display.update()
         print("Goodbye")
         pygame.quit()
         quit()
 
+def json_test():
+    scores = {}
+    with open("scores.json", "r") as f:
+        if os.stat("scores.json").st_size != 0:
+            scores = f.read()
+            scores = json.loads(scores)
+    print(type(scores))
+    with open("scores.json", "w") as f:
+        scores['player2'] = str(2)
+        json.dump(scores, f)
+    print(str(scores))
 if __name__ == "__main__":
+    # json_test()
     disp = Display(300, 300)
     disp.game_loop()
