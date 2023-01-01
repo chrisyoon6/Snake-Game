@@ -28,7 +28,7 @@ class Display:
     WHITE = (255,255,255)
     SQUARE_PIX = 20
     FONT_SIZE = 30
-    SCORES_FONT_SIZE = 20
+    SCORES_FONT_SIZE = 30
     FPS_MILLIS = 10
     """For left, top corner as reference pt"""
     DIRS = [[0,0], [SQUARE_PIX,0], [SQUARE_PIX, SQUARE_PIX], [0, SQUARE_PIX]]
@@ -190,7 +190,9 @@ class Display:
         for s in scores:
             scores_str += str(s) + " "
         scores_label = self.scores_font.render(scores_str, True, Display.WHITE)
-        self.dis.blit(scores_label, (0,0))
+        curr_score_label = self.scores_font.render("Your score: " + str(self.food_count), True, Display.WHITE)
+        options_label = self.scores_font.render("Press \'c\' to play again", True, Display.WHITE)
+        self.dis.blits(blit_sequence=((scores_label, (0,0)), (curr_score_label, (0, int(self.height*1/4))), (options_label, (0,int(self.height*3/4)))))
         pygame.display.update()
 
     def endgame_handler(self):
