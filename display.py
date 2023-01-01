@@ -56,7 +56,7 @@ class Display:
         self.orient = None
         self.scores = {}
 
-    def initiate_game(self):
+    def initiate_game(self) -> None:
         """Initiates the Snake Game
         """        
         self.dis = pygame.display.set_mode((self.width,self.height))
@@ -123,7 +123,7 @@ class Display:
         self.red_rect.update(new_l, new_t, Display.SQUARE_PIX, Display.SQUARE_PIX)
         pygame.draw.rect(self.dis, Display.RED, self.red_rect)
 
-    def update_snake(self, has_eaten_food):
+    def update_snake(self, has_eaten_food) -> None:
         """Updates the snake's chain of rectangles
 
         Args:
@@ -135,13 +135,13 @@ class Display:
             self.snake.pop()
             self.snake_rects.pop()
 
-    def display_snake(self):
+    def display_snake(self) -> None:
         """Displays the current snake on the screen
         """        
         for cmp in self.snake_rects:
             pygame.draw.rect(self.dis, Display.BLUE, cmp)
 
-    def update_display(self):
+    def update_display(self) -> None:
         """Updates the screen with the game's current state
         """        
         self.dis.fill(Display.BLACK)
@@ -160,7 +160,7 @@ class Display:
             return True
         return False
 
-    def update_scores(self):
+    def update_scores(self) -> None:
         """Displays the highest scores from this game. To be called when the game has ended.
         """     
         scores = {}
@@ -175,13 +175,13 @@ class Display:
             json.dump(scores, f)
         self.scores = scores
 
-    def display_highscores(self, nums=5):
+    def display_highscores(self, nums=5) -> None:
         """Displays the top scores of the game.
 
         Args:
             nums (int, optional): _description_. Defaults to 5.
         """        
-        scores = list(self.scores.values())
+        scores = [int(s) for s in self.scores.values()]
         scores.sort(reverse=True)
         if nums > len(scores):
             nums = len(scores)
@@ -195,7 +195,7 @@ class Display:
         self.dis.blits(blit_sequence=((scores_label, (0,0)), (curr_score_label, (0, int(self.height*1/4))), (options_label, (0,int(self.height*3/4)))))
         pygame.display.update()
 
-    def endgame_handler(self):
+    def endgame_handler(self) -> Status:
         """Handles anything that should occur once the game is over.
 
         Returns:
@@ -209,7 +209,7 @@ class Display:
                 return Status.play
         return Status.dormat
 
-    def game_loop(self):
+    def game_loop(self) -> None:
         """Executes the Snake game
         """        
         while self.keep_playing:
@@ -218,7 +218,7 @@ class Display:
         pygame.quit()
         quit()
         
-    def in_game_handler(self):
+    def in_game_handler(self) -> Status:
         """Handles all in-game events
 
         Returns:
@@ -237,9 +237,8 @@ class Display:
 
             clk.tick(self.fps_millis)
             for event in pygame.event.get():
-                # print(event)
-                if event.type == pygame.QUIT:
-                    game_over = True
+                if event.type == pygame.WINDOWCLOSE:
+                    return Status.quit
                 if event.type == pygame.KEYDOWN:
                     x,y = (0,0)
                     if event.key == pygame.K_LEFT:
@@ -272,7 +271,6 @@ class Display:
                 self.dis.fill(Display.BLACK)
                 self.update_scores()  
             elif not has_eaten and self.has_collided():
-                print(self.snake)
                 print("Collided!")
                 game_over = True
                 self.dis.fill(Display.BLACK)
@@ -280,17 +278,6 @@ class Display:
 
             pygame.display.update()
 
-def json_test():
-    scores = {}
-    with open("scores.json", "r") as f:
-        if os.stat("scores.json").st_size != 0:
-            scores = f.read()
-            scores = json.loads(scores)
-    print(type(scores))
-    with open("scores.json", "w") as f:
-        scores['player2'] = str(2)
-        json.dump(scores, f)
-    print(str(scores))
 if __name__ == "__main__":
     # json_test()
     disp = Display(300, 300)
