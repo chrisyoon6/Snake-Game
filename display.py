@@ -8,12 +8,18 @@ from collections import deque
 from copy import copy
 import json
 import os
+
 class Orientation(Enum):
     none = -1
     up = 0
     right = 1
     down = 2
     left = 3
+
+class Status(Enum):
+    dormat = -1
+    quit = 0
+    play = 1
 
 class Display:
     RED = (255,0,0)
@@ -36,24 +42,37 @@ class Display:
         pygame.init()
         self.width = width
         self.height = height
-        self.dis = pygame.display.set_mode((width,height))
+        self.fps_millis = Display.FPS_MILLIS
+        self.pix_change = Display.SQUARE_PIX
+        self.font = font.SysFont("arial", Display.FONT_SIZE)
+        self.scores_font = font.SysFont("arial", Display.SCORES_FONT_SIZE)
+        self.keep_playing = True
+        self.dis = None
+        self.snake = None
+        self.snake_head = None
+        self.snake_rects = None
+        self.red_rect = None
+        self.food_count = None
+        self.orient = None
+        self.scores = {}
+
+    def initiate_game(self):
+        """Initiates the Snake Game
+        """        
+        self.dis = pygame.display.set_mode((self.width,self.height))
         pygame.display.set_caption("Snake Game")
         """List of tuples representing the top left corner of each rectangle component the snake."""
-        self.snake = deque([(width//2, height//2)])
-        self.snake_head = Rect(width//2, height//2, Display.SQUARE_PIX, Display.SQUARE_PIX)
+        self.snake = deque([(self.width//2, self.height//2)])
+        self.snake_head = Rect(self.width//2, self.height//2, Display.SQUARE_PIX, Display.SQUARE_PIX)
         self.snake_rects = [self.snake_head]
         pygame.draw.rect(self.dis, Display.BLUE, self.snake_head)
         red_l,red_t = self.rand_food_location()
         self.red_rect = Rect(red_l, red_t, Display.SQUARE_PIX, Display.SQUARE_PIX)
         pygame.draw.rect(self.dis, Display.RED, self.red_rect)
-        self.fps_millis = Display.FPS_MILLIS
-        self.pix_change = Display.SQUARE_PIX
         self.food_count = 0
         self.orient = Orientation.none
-        self.font = font.SysFont("arial", Display.FONT_SIZE)
-        self.scores_font = font.SysFont("arial", Display.SCORES_FONT_SIZE)
         self.scores = {}
-        
+
     def is_within_window(self, x, y) -> bool:
         """Determines if the coordinates are within the defined window size
 
@@ -157,6 +176,11 @@ class Display:
         self.scores = scores
 
     def display_highscores(self, nums=5):
+        """Displays the top scores of the game.
+
+        Args:
+            nums (int, optional): _description_. Defaults to 5.
+        """        
         scores = list(self.scores.values())
         scores.sort(reverse=True)
         if nums > len(scores):
@@ -165,27 +189,49 @@ class Display:
         scores_str = "High scores: "
         for s in scores:
             scores_str += str(s) + " "
-        print(scores_str)
         scores_label = self.scores_font.render(scores_str, True, Display.WHITE)
         self.dis.blit(scores_label, (0,0))
         pygame.display.update()
 
     def endgame_handler(self):
+        """Handles anything that should occur once the game is over.
+
+        Returns:
+            Status: the status of the game, selected by the user
+        """                
         self.display_highscores()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return True
-        return False
+                return Status.quit
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_c:
+                return Status.play
+        return Status.dormat
 
     def game_loop(self):
+        """Executes the Snake game
+        """        
+        while self.keep_playing:
+            self.initiate_game()
+            self.keep_playing = self.in_game_handler() == Status.play
+        pygame.quit()
+        quit()
+        
+    def in_game_handler(self):
+        """Handles all in-game events
+
+        Returns:
+            Status: Whether the user has quit the game or wants to play again
+        """        
         clk = Clock()
         game_over = False
         close_app = False
         prev_move = (0,0)            
-        while not close_app:
+        while True:
             if game_over:
-                close_app = self.endgame_handler()
-                continue
+                status = self.endgame_handler()
+                if status == Status.dormat:
+                    continue
+                return status
 
             clk.tick(self.fps_millis)
             for event in pygame.event.get():
@@ -231,9 +277,6 @@ class Display:
                 self.update_scores()  
 
             pygame.display.update()
-        print("Goodbye")
-        pygame.quit()
-        quit()
 
 def json_test():
     scores = {}
